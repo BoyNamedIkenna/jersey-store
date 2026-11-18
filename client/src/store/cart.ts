@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Pattern, Sport } from "@/lib/api";
+import type { Pattern, QuoteLine, Sport } from "@/lib/api";
 
 // Everything the cart needs to display a line without refetching the product.
 // priceKobo is for display only. The server recomputes prices from the database at checkout.
@@ -27,6 +27,9 @@ interface CartState {
   setQuantity: (variantId: string, quantity: number) => void;
   remove: (variantId: string) => void;
   clear: () => void;
+  // Applies fresh server data: updates price, name and stock limit, and trims quantities
+  // that no longer fit. Sold-out and unavailable lines are left for the drawer to flag.
+  syncWithQuote: (lines: QuoteLine[]) => void;
 }
 
 export const useCart = create<CartState>()(
@@ -62,6 +65,21 @@ export const useCart = create<CartState>()(
       remove: (variantId) => set((state) => ({ items: state.items.filter((i) => i.variantId !== variantId) })),
 
       clear: () => set({ items: [] }),
+
+      syncWithQuote: (lines) =>
+        set((state) => ({
+          items: state.items.map((item) => {
+            const line = lines.find((l) => l.variantId === item.variantId);
+            if (!line || line.status === "sold_out" || line.status === "unavailable") return item;
+            return {
+              ...item,
+              name: line.name ?? item.name,
+              priceKobo: line.priceKobo,
+              maxStock: line.stock,
+              quantity: Math.min(item.quantity, line.stock),
+            };
+          }),
+        })),
     }),
     { name: "jersey-cart" } // localStorage key
   )

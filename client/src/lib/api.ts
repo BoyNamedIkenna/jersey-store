@@ -7,6 +7,8 @@ export type Kit = "home" | "away" | "third";
 export type Size = "S" | "M" | "L" | "XL" | "XXL";
 export type SortKey = "newest" | "price_asc" | "price_desc";
 export type Pattern = "solid" | "stripes" | "hoops" | "sash" | "halves";
+export type QuoteStatus = "ok" | "reduced" | "sold_out" | "unavailable";
+
 
 export class ApiError extends Error {
   status: number;
@@ -70,6 +72,24 @@ export interface CatalogueFilters {
   page: number;
 }
 
+export interface QuoteLine {
+  variantId: string;
+  status: QuoteStatus;
+  requested: number;
+  quantity: number;
+  stock: number;
+  priceKobo: number;
+  lineTotalKobo: number;
+  name?: string;
+  slug?: string;
+  size?: string;
+}
+
+export interface Quote {
+  lines: QuoteLine[];
+  subtotalKobo: number;
+}
+
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
   const url = new URL(path, API_URL);
   for (const [key, value] of Object.entries(params)) {
@@ -90,4 +110,14 @@ export function fetchLeagues(): Promise<League[]> {
 
 export function fetchProduct(slug: string): Promise<ProductDetail> {
   return get<ProductDetail>(`/products/${encodeURIComponent(slug)}`);
+}
+
+export async function fetchQuote(items: { variantId: string; quantity: number }[]): Promise<Quote> {
+  const res = await fetch(new URL("/cart/quote", API_URL), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
+  return res.json() as Promise<Quote>;
 }
