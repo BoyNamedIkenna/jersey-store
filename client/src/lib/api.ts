@@ -90,12 +90,19 @@ export interface Quote {
   subtotalKobo: number;
 }
 
-async function get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
+export interface Me {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  role: "customer" | "admin";
+}
+
+async function get<T>(path: string, params: Record<string, string | number | undefined> = {},token?: string): Promise<T> {
   const url = new URL(path, API_URL);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) url.searchParams.set(key, String(value));
   }
-  const res = await fetch(url);
+ const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
   if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
   return res.json() as Promise<T>;
 }
@@ -120,4 +127,8 @@ export async function fetchQuote(items: { variantId: string; quantity: number }[
   });
   if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
   return res.json() as Promise<Quote>;
+}
+
+export function fetchMe(token: string): Promise<Me> {
+  return get<Me>("/me", {}, token);
 }

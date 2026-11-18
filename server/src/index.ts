@@ -5,6 +5,7 @@ import { productsRouter } from "./routes/products";
 import { leaguesRouter } from "./routes/leagues";
 import { errorHandler, notFound } from "./middleware/error";
 import { cartRouter } from "./routes/cart"
+import { meRouter } from "./routes/me"
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL ?? "*" }));
@@ -20,6 +21,7 @@ app.get("/health", (_req, res) => {
 app.use("/products", productsRouter);
 app.use("/leagues", leaguesRouter);
 app.use("/cart", cartRouter);
+app.use("/me", meRouter);
 
 // Order matters: these two must come after every route.
 app.use(notFound);
