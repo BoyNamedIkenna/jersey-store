@@ -8,6 +8,25 @@ export type Size = "S" | "M" | "L" | "XL" | "XXL";
 export type SortKey = "newest" | "price_asc" | "price_desc";
 export type Pattern = "solid" | "stripes" | "hoops" | "sash" | "halves";
 
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export interface Variant {
+  id: string;
+  size: Size;
+  stock: number;
+}
+
+export interface ProductDetail extends Product {
+  description: string;
+  variants: Variant[];
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -57,7 +76,7 @@ async function get<T>(path: string, params: Record<string, string | number | und
     if (value !== undefined) url.searchParams.set(key, String(value));
   }
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
   return res.json() as Promise<T>;
 }
 
@@ -67,4 +86,8 @@ export  function fetchProducts(filters: CatalogueFilters): Promise<ProductPage> 
 
 export function fetchLeagues(): Promise<League[]> {
   return get<League[]>("/leagues");
+}
+
+export function fetchProduct(slug: string): Promise<ProductDetail> {
+  return get<ProductDetail>(`/products/${encodeURIComponent(slug)}`);
 }
