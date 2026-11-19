@@ -63,6 +63,7 @@ export function CartDrawer() {
     (sum, item) => (isUnavailable(statusById.get(item.variantId)) ? sum : sum + item.priceKobo * item.quantity),
     0
   );
+  const canCheckout = priceState === "fresh" && !items.some((i) => isUnavailable(statusById.get(i.variantId)));
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -173,10 +174,15 @@ export function CartDrawer() {
                 <p className="text-xs text-muted-foreground">Shipping and payment are handled at checkout.</p>
               )}
 
-              {/* Wired up in the checkout step. It will require fresh prices and no unavailable lines. */}
-              <Button size="lg" className="w-full" disabled>
-                Checkout
-              </Button>
+              {canCheckout ? (
+                <Link to="/checkout" onClick={() => setOpen(false)} className={`${buttonVariants({ size: "lg" })} w-full`}>
+                  Checkout
+                </Link>
+              ) : (
+                <Button size="lg" className="w-full" disabled>
+                  Checkout
+                </Button>
+              )}
             </SheetFooter>
           </>
         )}

@@ -7,7 +7,6 @@ export interface AuthUser {
   email: string | null;
 }
 
-// Lets route handlers read req.user with the right type.
 declare global {
   namespace Express {
     interface Request {
@@ -16,22 +15,35 @@ declare global {
   }
 }
 
-// Protects a route. The browser sends "Authorization: Bearer <access token>".
-// getClaims() verifies the token's signature (against Supabase's published signing keys, cached)
-// and checks it has not expired. Never trust a user id that comes from the request body or query.
+async function verifyBearer(header: string): Promise<AuthUser> {
+  const token = header.slice("Bearer ".length);
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims?.sub) throw new AppError(401, "Invalid or expired session");
+  return {
+    id: data.claims.sub,
+    email: (data.claims as { email?: string }).email ?? null,
+  };
+}
+
+// Protects a route. Never trust a user id that comes from the request body or query.
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
     const header = req.headers.authorization;
     if (!header?.startsWith("Bearer ")) throw new AppError(401, "Sign in required");
+    req.user = await verifyBearer(header);
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
 
-    const token = header.slice("Bearer ".length);
-    const { data, error } = await supabase.auth.getClaims(token);
-    if (error || !data?.claims?.sub) throw new AppError(401, "Invalid or expired session");
-
-    req.user = {
-      id: data.claims.sub,
-      email: (data.claims as { email?: string }).email ?? null,
-    };
+// For routes that guests may use. No token means guest (req.user stays undefined).
+// A token that is present but invalid is still rejected, so an expired session
+// asks the shopper to sign in again instead of quietly becoming a guest order.
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    const header = req.headers.authorization;
+    if (header?.startsWith("Bearer ")) req.user = await verifyBearer(header);
     next();
   } catch (err) {
     next(err);

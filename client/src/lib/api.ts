@@ -8,13 +8,17 @@ export type Size = "S" | "M" | "L" | "XL" | "XXL";
 export type SortKey = "newest" | "price_asc" | "price_desc";
 export type Pattern = "solid" | "stripes" | "hoops" | "sash" | "halves";
 export type QuoteStatus = "ok" | "reduced" | "sold_out" | "unavailable";
+export type PaymentStatus = "paid" | "pending";
+export type OrderStatus = "pending" | "paid" | "failed" | "cancelled";
 
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  body: unknown;
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -97,6 +101,28 @@ export interface Me {
   role: "customer" | "admin";
 }
 
+export interface CheckoutInput {
+  items: { variantId: string; quantity: number }[];
+  email?: string; // guests only; the server uses the account email when signed in
+  shipping: { name: string; phone: string; address: string; city: string; state: string };
+}
+
+export interface CreatedOrder {
+  orderId: string;
+  reference: string;
+  accessCode: string;
+  authorizationUrl: string;
+  totalKobo: number;
+}
+
+export interface OrderSummary {
+  reference: string;
+  status: OrderStatus;
+  totalKobo: number;
+  createdAt: string;
+  items: { name: string; size: string; quantity: number; unitPriceKobo: number }[];
+}
+
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {},token?: string): Promise<T> {
   const url = new URL(path, API_URL);
   for (const [key, value] of Object.entries(params)) {
@@ -131,4 +157,33 @@ export async function fetchQuote(items: { variantId: string; quantity: number }[
 
 export function fetchMe(token: string): Promise<Me> {
   return get<Me>("/me", {}, token);
+}
+
+async function post<T>(path: string, body: unknown, token?: string): Promise<T> {
+  const res = await fetch(new URL(path, API_URL), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message = typeof json?.error === "string" ? json.error : `Request failed (${res.status})`;
+    throw new ApiError(res.status, message, json);
+  }
+  return json as T;
+}
+
+export function createOrder(input: CheckoutInput, token?: string): Promise<CreatedOrder> {
+  return post<CreatedOrder>("/orders", input, token);
+}
+
+export function verifyPayment(reference: string, token?: string): Promise<{ status: PaymentStatus }> {
+  return post<{ status: PaymentStatus }>("/payments/verify", { reference }, token);
+}
+
+export function fetchOrder(reference: string, token?: string): Promise<OrderSummary> {
+  return get<OrderSummary>(`/orders/${encodeURIComponent(reference)}`, {}, token);
 }

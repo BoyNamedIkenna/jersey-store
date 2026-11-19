@@ -9,6 +9,8 @@ import ProductPage from "@/pages/ProductPage";
 import { useCartCount } from "@/store/cart";
 import { useCartUi } from "@/store/cartUi";
 import { signOut, useAuth } from "@/store/auth";
+import CheckoutPage from "@/pages/CheckoutPage";
+import OrderPage from "@/pages/OrderPage";
 
 export default function App() {
   const cartCount = useCartCount();
@@ -54,6 +56,8 @@ export default function App() {
         <Route path="/" element={<CataloguePage />} />
         <Route path="/products/:slug" element={<ProductPage />} />
         <Route path="/login" element={<AuthPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order/:reference" element={<OrderPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/account" element={<AccountPage />} />
         </Route>

@@ -6,12 +6,14 @@ import { leaguesRouter } from "./routes/leagues";
 import { errorHandler, notFound } from "./middleware/error";
 import { cartRouter } from "./routes/cart"
 import { meRouter } from "./routes/me"
+import { ordersRouter } from "./routes/orders";
+import { paymentsRouter } from "./routes/payments";
+import { webhooksRouter } from "./routes/webhooks";
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL ?? "*" }));
 
-// Later: the Paystack webhook route must be mounted BEFORE this line with express.raw(),
-// because signature checking needs the untouched request body.
+app.use("/webhooks", webhooksRouter);
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
@@ -22,6 +24,8 @@ app.use("/products", productsRouter);
 app.use("/leagues", leaguesRouter);
 app.use("/cart", cartRouter);
 app.use("/me", meRouter);
+app.use("/orders", ordersRouter);
+app.use("/payments", paymentsRouter);
 
 // Order matters: these two must come after every route.
 app.use(notFound);
