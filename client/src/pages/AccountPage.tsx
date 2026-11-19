@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchMe } from "@/lib/api";
 import { useAuth } from "@/store/auth";
+import { OrderHistory } from "@/components/OrderHistory";
 
 // First page that talks to a protected API route. If this loads, the whole chain works:
 // browser session -> access token -> Express middleware -> database.
@@ -42,7 +43,7 @@ export default function AccountPage() {
         </dl>
       )}
 
-      <p className="mt-6 text-sm text-muted-foreground">Your orders will appear here once checkout is built.</p>
+      <OrderHistory />
     </main>
   );
 }

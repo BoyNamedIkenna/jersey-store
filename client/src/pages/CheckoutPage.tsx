@@ -10,6 +10,7 @@ import { ApiError, createOrder, fetchQuote, verifyPayment, type QuoteLine } from
 import { formatNaira } from "@/lib/format";
 import { useAuth } from "@/store/auth";
 import { useCart } from "@/store/cart";
+import { usePendingOrder } from "@/store/pendingOrder";
 
 interface FormState {
   email: string;
@@ -117,6 +118,7 @@ export default function CheckoutPage() {
     }
     navigate(`/order/${reference}`);
     useCart.getState().clear();
+    usePendingOrder.getState().clear();
   }
 
   async function handlePay(e: FormEvent) {
@@ -143,6 +145,7 @@ export default function CheckoutPage() {
         },
         token,
       );
+      usePendingOrder.getState().remember(order.reference);
 
       const popup = new PaystackPop();
       popup.resumeTransaction(order.accessCode, {

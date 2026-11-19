@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Route, Routes } from "react-router";
 import { CartDrawer } from "@/components/CartDrawer";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -11,12 +13,27 @@ import { useCartUi } from "@/store/cartUi";
 import { signOut, useAuth } from "@/store/auth";
 import CheckoutPage from "@/pages/CheckoutPage";
 import OrderPage from "@/pages/OrderPage";
+import { PendingOrderBanner } from "@/components/PendingOrderBanner";
+
 
 export default function App() {
   const cartCount = useCartCount();
   const setCartOpen = useCartUi((s) => s.setOpen);
   const session = useAuth((s) => s.session);
   const authLoading = useAuth((s) => s.loading);
+  const queryClient = useQueryClient();
+  const userId = session?.user.id ?? null;
+  const previousUserId = useRef<string | null>(null);
+
+  // When the user changes or signs out, drop cached order data so it can't show to the next person.
+  useEffect(() => {
+    if (authLoading) return;
+    if (previousUserId.current && previousUserId.current !== userId) {
+      queryClient.removeQueries({ queryKey: ["orders"] });
+      queryClient.removeQueries({ queryKey: ["order"] });
+    }
+    previousUserId.current = userId;
+  }, [userId, authLoading, queryClient]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -51,7 +68,7 @@ export default function App() {
           </div>
         </div>
       </header>
-
+      <PendingOrderBanner />
       <Routes>
         <Route path="/" element={<CataloguePage />} />
         <Route path="/products/:slug" element={<ProductPage />} />

@@ -1,18 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePendingPayment } from "@/hooks/usePendingPayment";
 import { ApiError, fetchOrder, verifyPayment } from "@/lib/api";
 import { formatNaira } from "@/lib/format";
 import { useAuth } from "@/store/auth";
 
 export default function OrderPage() {
   const { reference = "" } = useParams();
+  const navigate = useNavigate();
   const session = useAuth((s) => s.session);
   const authLoading = useAuth((s) => s.loading);
   const token = session?.access_token;
   const [checking, setChecking] = useState(false);
+
+  // A retried payment gets a new reference, so move the URL along with it.
+  const { pay, busyReference, error: payError } = usePendingPayment({
+    onReference: (newReference) => navigate(`/order/${newReference}`, { replace: true }),
+  });
+
+  // If someone who was signed in on this page signs out, leave. Guests are never bounced.
+  const hadSession = useRef(false);
+  useEffect(() => {
+    if (authLoading) return;
+    if (session) hadSession.current = true;
+    else if (hadSession.current) navigate("/", { replace: true });
+  }, [session, authLoading, navigate]);
 
   const order = useQuery({
     queryKey: ["order", reference],
@@ -72,13 +87,23 @@ export default function OrderPage() {
 
       {o.status === "pending" && (
         <div className="space-y-3">
-          <h1 className="text-2xl font-semibold">Confirming your payment…</h1>
+          <h1 className="text-2xl font-semibold">Waiting for payment</h1>
           <p className="text-sm text-muted-foreground">
-            This usually takes a few seconds. If you already paid, this page updates by itself.
+            If you already paid, this page updates by itself. Otherwise you can complete the payment below.
           </p>
-          <Button variant="outline" size="sm" onClick={recheck} disabled={checking}>
-            {checking ? "Checking…" : "Check payment status"}
-          </Button>
+          {payError && (
+            <p role="alert" className="text-sm text-destructive">
+              {payError}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => pay(reference)} disabled={busyReference !== null}>
+              {busyReference !== null ? "Opening payment…" : "Complete payment"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={recheck} disabled={checking}>
+              {checking ? "Checking…" : "Check payment status"}
+            </Button>
+          </div>
         </div>
       )}
 

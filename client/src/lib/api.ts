@@ -187,3 +187,15 @@ export function verifyPayment(reference: string, token?: string): Promise<{ stat
 export function fetchOrder(reference: string, token?: string): Promise<OrderSummary> {
   return get<OrderSummary>(`/orders/${encodeURIComponent(reference)}`, {}, token);
 }
+
+export function fetchOrders(token: string): Promise<OrderSummary[]> {
+  return get<OrderSummary[]>("/orders", {}, token);
+}
+
+export type PayOrderResult =
+  | { status: "paid"; reference: string }
+  | { status: "ready"; reference: string; accessCode: string; totalKobo: number };
+
+export function payForOrder(reference: string, token?: string): Promise<PayOrderResult> {
+  return post<PayOrderResult>(`/orders/${encodeURIComponent(reference)}/pay`, {}, token);
+}
