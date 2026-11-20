@@ -14,6 +14,7 @@ import { signOut, useAuth } from "@/store/auth";
 import CheckoutPage from "@/pages/CheckoutPage";
 import OrderPage from "@/pages/OrderPage";
 import { PendingOrderBanner } from "@/components/PendingOrderBanner";
+import { AssistantChat } from "@/components/AssistantChat";
 
 
 export default function App() {
@@ -82,6 +83,7 @@ export default function App() {
       </Routes>
 
       <CartDrawer />
+      <AssistantChat />
     </div>
   );
 }

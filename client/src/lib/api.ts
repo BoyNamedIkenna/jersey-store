@@ -123,6 +123,42 @@ export interface OrderSummary {
   items: { name: string; size: string; quantity: number; unitPriceKobo: number }[];
 }
 
+export interface AssistantProduct extends Product {
+  sizesInStock: string[];
+}
+
+export interface AssistantFilters {
+  query: string;
+  sport: Sport | null;
+  league: string | null;
+  teams: string[];
+  kit: Kit | null;
+  color: string | null;
+  maxPriceNaira: number | null;
+  size: Size | null;
+  minPriceNaira: number | null;
+}
+
+export interface AssistantMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AssistantReply {
+  reply: string;
+  products: AssistantProduct[];
+  filters: AssistantFilters | null;
+}
+
+export type AssistantStreamEvent =
+  | { type: "status"; text: string }
+  | { type: "products"; products: AssistantProduct[]; filters: AssistantFilters | null }
+  | { type: "delta"; text: string }
+  | { type: "reset" }
+  | { type: "done"; reply: string; products: AssistantProduct[]; filters: AssistantFilters | null }
+  | { type: "error"; message: string };
+
+
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {},token?: string): Promise<T> {
   const url = new URL(path, API_URL);
   for (const [key, value] of Object.entries(params)) {
@@ -198,4 +234,50 @@ export type PayOrderResult =
 
 export function payForOrder(reference: string, token?: string): Promise<PayOrderResult> {
   return post<PayOrderResult>(`/orders/${encodeURIComponent(reference)}/pay`, {}, token);
+}
+
+export function askAssistant(messages: AssistantMessage[]): Promise<AssistantReply> {
+  return post<AssistantReply>("/assistant", { messages });
+}
+
+
+// Reads the server-sent events from POST /assistant/stream. EventSource cannot POST, so this uses fetch.
+export async function streamAssistant(
+  messages: AssistantMessage[],
+  onEvent: (event: AssistantStreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(new URL("/assistant/stream", API_URL), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+    ...(signal ? { signal } : {}),
+  });
+
+  // Limits and validation fail before the stream starts, as plain JSON errors.
+  if (!res.ok || !res.body) {
+    const json = await res.json().catch(() => null);
+    const message = typeof json?.error === "string" ? json.error : `Request failed (${res.status})`;
+    throw new ApiError(res.status, message, json);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // Events are separated by a blank line.
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const chunk = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+      if (line) onEvent(JSON.parse(line.slice(6)) as AssistantStreamEvent);
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
 }

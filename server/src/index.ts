@@ -9,8 +9,11 @@ import { meRouter } from "./routes/me"
 import { ordersRouter } from "./routes/orders";
 import { paymentsRouter } from "./routes/payments";
 import { webhooksRouter } from "./routes/webhooks";
+import { assistantRouter } from "./routes/assistant";
 
 const app = express();
+// Render sits behind a proxy. Without this, every visitor looks like the same IP and shares one rate limit.
+app.set("trust proxy", 1);
 app.use(cors({ origin: process.env.CLIENT_URL ?? "*" }));
 
 app.use("/webhooks", webhooksRouter);
@@ -26,6 +29,7 @@ app.use("/cart", cartRouter);
 app.use("/me", meRouter);
 app.use("/orders", ordersRouter);
 app.use("/payments", paymentsRouter);
+app.use("/assistant", assistantRouter);
 
 // Order matters: these two must come after every route.
 app.use(notFound);

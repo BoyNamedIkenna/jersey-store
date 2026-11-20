@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { leagues, teams, products } from "./data";
+import { colorFamily } from "../lib/color";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SECRET_KEY;
@@ -71,6 +72,7 @@ async function main() {
       description: p.description,
       price_kobo: p.price,
       primary_color: p.primary,
+      color_family: colorFamily(p.primary),
       secondary_color: p.secondary,
       accent_color: p.accent,
       pattern: p.pattern,
