@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ComponentProps, type FormEvent } from "react";
-import PaystackPop from "@paystack/inline-js";
+import Paystack from "@paystack/inline-js";
 import { Link, useNavigate } from "react-router";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,7 +147,7 @@ export default function CheckoutPage() {
       );
       usePendingOrder.getState().remember(order.reference);
 
-      const popup = new PaystackPop();
+      const popup = new Paystack();
       popup.resumeTransaction(order.accessCode, {
         onSuccess: () => {
           void finish(order.reference);
