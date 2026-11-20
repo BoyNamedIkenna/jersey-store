@@ -24,10 +24,6 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/debug-ip", (req, res) => {
-  res.json({ ip: req.ip, forwardedFor: req.headers["x-forwarded-for"] });
-});
-
 app.use(generalLimiter); // applies to everything registered below
 
 app.post("/orders", orderWriteLimiter);
