@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import PaystackPop from "@paystack/inline-js";
+import Paystack from "@paystack/inline-js";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError, payForOrder, verifyPayment } from "@/lib/api";
@@ -43,7 +43,7 @@ export function usePendingPayment(options: { onReference?: (reference: string) =
       options.onReference?.(result.reference);
       usePendingOrder.getState().remember(result.reference);
 
-      const popup = new PaystackPop();
+      const popup = new Paystack();
       popup.resumeTransaction(result.accessCode, {
         onSuccess: () => {
           void finish(result.reference);
