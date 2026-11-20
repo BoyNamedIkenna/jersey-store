@@ -303,7 +303,7 @@ export async function runAssistant(messages: ChatMessage[], options: AssistantOp
       text = "";
     }
 
-    const outputs = [];
+    const outputs: { type: "function_call_output"; call_id: string; output: string }[] = [];
     for (const toolCall of toolCalls) {
       let result: unknown;
       if (toolCall.name === "search_products") {
