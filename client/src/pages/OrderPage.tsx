@@ -29,14 +29,20 @@ export default function OrderPage() {
     else if (hadSession.current) navigate("/", { replace: true });
   }, [session, authLoading, navigate]);
 
-  const order = useQuery({
+    const order = useQuery({
     queryKey: ["order", reference],
     queryFn: () => fetchOrder(reference, token),
     enabled: !authLoading && reference !== "",
+    staleTime: 0,
+    refetchOnMount: "always",
     // While pending, poll every 3 seconds (up to about a minute) in case the webhook confirms the payment.
     refetchInterval: (q) => (q.state.data?.status === "pending" && q.state.dataUpdateCount < 20 ? 3000 : false),
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
   });
+
+  // A cached "pending" copy from before this page opened may be out of date, because the order may have been
+  // paid since. Wait for one fresh fetch before showing a pending order, so the payment buttons never flash.
+  const stalePending = order.data?.status === "pending" && !order.isFetchedAfterMount;
 
   async function recheck() {
     setChecking(true);
@@ -50,7 +56,7 @@ export default function OrderPage() {
     }
   }
 
-  if (authLoading || order.isPending) {
+    if (authLoading || order.isPending || stalePending) {
     return (
       <main className="mx-auto max-w-xl space-y-3 p-6">
         <Skeleton className="h-8 w-48" />

@@ -13,16 +13,17 @@ export function usePendingPayment(options: { onReference?: (reference: string) =
   const [busyReference, setBusyReference] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function finish(reference: string) {
+    async function finish(reference: string) {
     try {
       await verifyPayment(reference, token);
     } catch {
       /* the receipt page shows the real status */
     }
-    setBusyReference(null);
-    void queryClient.invalidateQueries({ queryKey: ["orders"] });
-    void queryClient.invalidateQueries({ queryKey: ["order", reference] });
     usePendingOrder.getState().clear();
+    void queryClient.invalidateQueries({ queryKey: ["orders"] });
+    // Wait for the fresh status before releasing the buttons, otherwise the stale "pending" page shows for a moment.
+    await queryClient.invalidateQueries({ queryKey: ["order", reference] });
+    setBusyReference(null);
     navigate(`/order/${reference}`);
   }
 
