@@ -10,6 +10,7 @@ import { ordersRouter } from "./routes/orders";
 import { paymentsRouter } from "./routes/payments";
 import { webhooksRouter } from "./routes/webhooks";
 import { assistantRouter } from "./routes/assistant";
+import { generalLimiter, orderWriteLimiter, paymentLimiter } from "./middleware/rateLimit";
 
 const app = express();
 // Render sits behind a proxy. Without this, every visitor looks like the same IP and shares one rate limit.
@@ -22,6 +23,16 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.get("/debug-ip", (req, res) => {
+  res.json({ ip: req.ip, forwardedFor: req.headers["x-forwarded-for"] });
+});
+
+app.use(generalLimiter); // applies to everything registered below
+
+app.post("/orders", orderWriteLimiter);
+app.post("/orders/:reference/pay", orderWriteLimiter);
+app.post("/payments/verify", paymentLimiter);
 
 app.use("/products", productsRouter);
 app.use("/leagues", leaguesRouter);
